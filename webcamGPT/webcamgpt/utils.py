@@ -25,38 +25,41 @@ def encode_image_to_base64(image: np.ndarray) -> str:
     return encoded_image
 
 
-def compose_payload(image: np.ndarray, prompt: str) -> dict:
+def compose_payload(images: list, prompt: str) -> dict:
     """
-    Composes a payload dictionary with a base64 encoded image and a text prompt for the GPT-4 Vision model.
+    Composes a payload dictionary with multiple base64 encoded images as history
+    and a text prompt for the GPT-4 Vision model.
 
     Args:
-        image (np.ndarray): The image in the form of a NumPy array to encode and send.
-        prompt (str): The prompt text to accompany the image in the payload.
+        images (list): A list of images, each an np.ndarray to encode and send.
+        prompt (str): The prompt text to accompany the images in the payload.
 
     Returns:
-        dict: A dictionary structured as a payload for the GPT-4 Vision model, including the model name,
-              an array of messages each containing a role and content with text and the base64 encoded image,
-              and the maximum number of tokens to generate.
+        dict: A structured payload for the GPT-4 Vision model, including multiple images and a prompt.
     """
-    base64_image = encode_image_to_base64(image)
+    # Initialize the content list with the text prompt
+    content = [{
+        "type": "text",
+        "text": prompt
+    }]
+    
+    # Add each base64-encoded image to the content list
+    for image in images:
+        base64_image = encode_image_to_base64(image)
+        content.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{base64_image}"
+            }
+        })
+
+    # Create the final payload with model, messages, and max_tokens
     return {
         "model": "gpt-4o-mini",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
-                        }
-                    }
-                ]
-            }
-        ],
+        "messages": [{
+            "role": "user",
+            "content": content
+        }],
         "max_tokens": 300
     }
+
